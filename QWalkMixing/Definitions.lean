@@ -28,6 +28,7 @@ Adjacency relation induced by a weighted graph.
 
 Two vertices are adjacent iff the corresponding weight is nonzero.
 -/
+@[simp]
 def WeightedGraph.Adj {V W : Type} [Zero W] (g : WeightedGraph V W) (v w : V) : Prop :=
   g.weight v w ≠ 0
 
@@ -66,7 +67,7 @@ This is expressed using the matrix exponential of the Hamiltonian `g.adjMatrix`.
 def UniformMixingAtTimeT {V : Type} [Fintype V] [DecidableEq V]
     (g : QWalkGraph V) (t : ℝ) : Prop :=
   let U_t := NormedSpace.exp ((Complex.I * t) • g.adjMatrix)
-  U_t • U_t.conjTranspose = ((1 : ℂ) / Fintype.card V) • (1 : Matrix V V ℂ)
+  U_t * U_t.conjTranspose = ((1 : ℂ) / Fintype.card V) • (1 : Matrix V V ℂ)
 
 /--
 A quantum walk graph has uniform mixing if there exists

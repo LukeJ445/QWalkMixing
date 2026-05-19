@@ -1,5 +1,7 @@
 import QWalkMixing.Support
 
+open Complex
+
 -- Formal proofs of results in "Uniform Mixing in Chiral Quantum Walks"
 -- https://arxiv.org/abs/2605.04414
 
@@ -40,22 +42,31 @@ Claim 2. There is a signing σ of K4 so that Kσ
 theorem K4_uniform_mixing : ∃ g : QWalkGraph (Fin 4),
     g.Adj = (SimpleGraph.completeGraph (Fin 4)).Adj
     ∧ UniformMixingAtTimeT g (π / (3 * Real.sqrt 3)) := by
+  -- our signing of K4 is given by the following matrix:
   let σ : Matrix (Fin 4) (Fin 4) ℂ := !![
-    0, 1, 1, 1;
-    1, 0, 1, 1;
-    1, 1, 0, 1;
-    1, 1, 1, 0;
+    0, -I, -I, -I;
+    I,  0, -I,  I;
+    I,  I,  0, -I;
+    I, -I,  I,  0;
   ]
-  have σ_hermitian : Matrix.IsHermitian σ := by sorry
-    --simp only [Matrix.IsHermitian, Matrix.conjTranspose, Matrix.transpose]
-    --funext x y
-    --simp
+  -- it is Hermetian (check by brute force)
+  have σ_hermitian : Matrix.IsHermitian σ := by
+    ext i j;
+    fin_cases i <;> fin_cases j <;> simp [σ]
+  -- we can view this as a QWalkGraph
   let Kσ : QWalkGraph (Fin 4) := {
     weight := σ
     adjMatrix_hermitian := σ_hermitian
   }
   use Kσ
-
+  -- it is a signing of K4 (check by brute force)
+  have Kσ_complete : Kσ.Adj = (SimpleGraph.completeGraph (Fin 4)).Adj := by
+    ext i j;
+    fin_cases i <;> fin_cases j <;> simp [Kσ, SimpleGraph.completeGraph, σ]
+  use Kσ_complete
+  -- prove uniform mixing at time π/3√3
+  unfold UniformMixingAtTimeT
+  intro U_t
   sorry
 
 #check SimpleGraph (Fin 4)
