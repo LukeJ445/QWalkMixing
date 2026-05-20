@@ -59,15 +59,35 @@ def QWalkGraph.of {V : Type} (g : SimpleGraph V) [Fintype V] [DecidableEq V] [De
   }
 
 /--
-Uniform mixing at time `t` means that the quantum walk evolution at time `t`
+Unitary evolution of the quantum walk at time t is given
+by the matrix exponential of the Hamiltonian (adjacency matrix)
+-/
+noncomputable def QWalkGraph.U {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
+    : ℝ → Matrix V V ℂ :=
+  fun (t : ℝ) => NormedSpace.exp ((Complex.I * t) • g.adjMatrix)
+
+/--
+The Hadamard product of two matrices A and B is the entrywise product.
+-/
+def HadamardProduct {V W : Type} [Mul W] (A B : Matrix V V W) : Matrix V V W :=
+  fun i j => A i j * B i j
+/--
+Mixing matrix at time t
+-/
+noncomputable def QWalkGraph.M {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
+    : ℝ → Matrix V V ℂ :=
+  fun (t : ℝ) => HadamardProduct (g.U t) (g.U t).conjTranspose
+
+/--
+Uniform mixing at time `t` means that the quantum walk at time `t`
 is the completely mixed state (all entries equal).
 
-This is expressed using the matrix exponential of the Hamiltonian `g.adjMatrix`.
+This is expressed using the mixing matrix `M t`,
+which is the Hadamard product of `U t` and its conjugate transpose.
 -/
 def UniformMixingAtTimeT {V : Type} [Fintype V] [DecidableEq V]
     (g : QWalkGraph V) (t : ℝ) : Prop :=
-  let U_t := NormedSpace.exp ((Complex.I * t) • g.adjMatrix)
-  U_t * U_t.conjTranspose = ((1 : ℂ) / Fintype.card V) • (1 : Matrix V V ℂ)
+  g.M t = ((1 : ℂ) / Fintype.card V) • (1 : Matrix V V ℂ)
 
 /--
 A quantum walk graph has uniform mixing if there exists

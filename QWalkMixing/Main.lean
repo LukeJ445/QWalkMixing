@@ -66,7 +66,9 @@ theorem K4_uniform_mixing : ∃ g : QWalkGraph (Fin 4),
   use Kσ_complete
   -- prove uniform mixing at time π/3√3
   unfold UniformMixingAtTimeT
-  intro U_t
+  unfold QWalkGraph.M
+  unfold QWalkGraph.U
+  simp
   sorry
 
 #check SimpleGraph (Fin 4)
