@@ -69,6 +69,7 @@ noncomputable def QWalkGraph.U {V : Type} [Fintype V] [DecidableEq V] (g : QWalk
 /--
 The Hadamard product of two matrices A and B is the entrywise product.
 -/
+@[simp]
 def HadamardProduct {V W : Type} [Mul W] (A B : Matrix V V W) : Matrix V V W :=
   fun i j => A i j * B i j
 /--
@@ -76,7 +77,23 @@ Mixing matrix at time t
 -/
 noncomputable def QWalkGraph.M {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
     : ℝ → Matrix V V ℂ :=
-  fun (t : ℝ) => HadamardProduct (g.U t) (g.U t).conjTranspose
+  fun (t : ℝ) => HadamardProduct (g.U t) ((g.U t).map star)
+
+/--
+Perfect state transfer at time `t` from vertex `a` to vertex `b` means that
+the mixing matrix entry `M t a b` is 1.
+-/
+def PSTAtTimeT {V : Type} [Fintype V] [DecidableEq V]
+    (g : QWalkGraph V) (a b : V) (t : ℝ) : Prop :=
+   g.M t a b = 1
+
+/--
+Perfect state transfer from vertex `a` to vertex `b` means that there exists some time `t`
+at which perfect state transfer occurs.
+-/
+def PST {V : Type} [Fintype V] [DecidableEq V]
+    (g : QWalkGraph V) (a b : V) : Prop :=
+  ∃ t : ℝ, PSTAtTimeT g a b t
 
 /--
 Uniform mixing at time `t` means that the quantum walk at time `t`
