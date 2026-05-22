@@ -8,6 +8,12 @@ import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
 
 
 /--
+The standard basis vector corresponding to vertex i
+-/
+@[simp]
+def e {V : Type} [DecidableEq V] (i : V) : V → ℂ := Pi.single i 1
+
+/--
 A `WeightedGraph V W` assigns a weight in `W` to each ordered pair of vertices in `V`.
 
 It is defined as a function `V × V → W`.
@@ -49,8 +55,7 @@ def QWalkGraph.of {V : Type} (g : SimpleGraph V) [Fintype V] [DecidableEq V] [De
       simp only [Matrix.IsHermitian, Matrix.conjTranspose, Matrix.transpose]
       funext x y
       simp
-      have hxy : g.Adj x y ∨ ¬g.Adj x y := by apply Classical.em
-      rcases hxy with (hxy | hxy)
+      by_cases hxy : g.Adj x y
       · simp [hxy]
         exact SimpleGraph.adj_symm g hxy
       · simp [hxy]
@@ -67,25 +72,42 @@ noncomputable def QWalkGraph.U {V : Type} [Fintype V] [DecidableEq V] (g : QWalk
   fun (t : ℝ) => NormedSpace.exp ((Complex.I * t) • g.adjMatrix)
 
 /--
+Mixing matrix at time t
+
+Define the mixing matrix M t as the entrywise norm squared of the unitary evolution U at t.
+-/
+noncomputable def QWalkGraph.M {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
+    : ℝ → Matrix V V ℝ :=
+  fun (t : ℝ) => Matrix.of (g.U t).map Complex.normSq
+
+/--
 The Hadamard product of two matrices A and B is the entrywise product.
 -/
 @[simp]
 def HadamardProduct {V W : Type} [Mul W] (A B : Matrix V V W) : Matrix V V W :=
   fun i j => A i j * B i j
 /--
-Mixing matrix at time t
+The mixing matrix definition is equivalent to the definition of
+`M` as the Hadamard product of `U` and `U`'s conjugate
+However, this definition would force our matrix to be complex-valued or require
+some extra work to show that the result is real-valued, so we stick with the original definition.
 -/
-noncomputable def QWalkGraph.M {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
-    : ℝ → Matrix V V ℂ :=
-  fun (t : ℝ) => HadamardProduct (g.U t) ((g.U t).map star)
+lemma M_alternative_def_eq {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V) :
+    ∀ (t : ℝ), (g.M t).map Complex.ofReal = HadamardProduct (g.U t) ((g.U t).map star) := by
+  intro t
+  unfold QWalkGraph.M
+  simp only [RCLike.star_def]
+  funext i j
+  simp only [Matrix.map_apply, Matrix.of_apply, HadamardProduct]
+  rw [Complex.normSq_eq_conj_mul_self, mul_comm]
 
 /--
 Perfect state transfer at time `t` from vertex `a` to vertex `b` means that
-the mixing matrix entry `M t a b` is 1.
+the mixing matrix entry `M t b a` is 1.
 -/
 def PSTAtTimeT {V : Type} [Fintype V] [DecidableEq V]
     (g : QWalkGraph V) (a b : V) (t : ℝ) : Prop :=
-   g.M t a b = 1
+   g.M t b a = 1
 
 /--
 Perfect state transfer from vertex `a` to vertex `b` means that there exists some time `t`
@@ -104,7 +126,7 @@ which is the Hadamard product of `U t` and its conjugate transpose.
 -/
 def UniformMixingAtTimeT {V : Type} [Fintype V] [DecidableEq V]
     (g : QWalkGraph V) (t : ℝ) : Prop :=
-  g.M t = ((1 : ℂ) / Fintype.card V) • (1 : Matrix V V ℂ)
+  g.M t = (1 / Fintype.card V) • (1 : Matrix V V ℝ)
 
 /--
 A quantum walk graph has uniform mixing if there exists
