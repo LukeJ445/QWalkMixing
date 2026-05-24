@@ -52,15 +52,10 @@ def QWalkGraph.of {V : Type} (g : SimpleGraph V) [Fintype V] [DecidableEq V] [De
   { weight := fun v w => if (g.Adj v w) then 1 else 0,
     adjMatrix_hermitian := by
       unfold WeightedGraph.adjMatrix
-      simp only [Matrix.IsHermitian, Matrix.conjTranspose, Matrix.transpose]
       funext x y
-      simp
       by_cases hxy : g.Adj x y
-      · simp [hxy]
-        exact SimpleGraph.adj_symm g hxy
-      · simp [hxy]
-        rw [SimpleGraph.adj_comm]
-        exact hxy
+      · simp [hxy, SimpleGraph.adj_comm]
+      · simp [hxy, SimpleGraph.adj_comm]
   }
 
 /--
@@ -126,7 +121,7 @@ which is the Hadamard product of `U t` and its conjugate transpose.
 -/
 def UniformMixingAtTimeT {V : Type} [Fintype V] [DecidableEq V]
     (g : QWalkGraph V) (t : ℝ) : Prop :=
-  g.M t = (1 / Fintype.card V) • (1 : Matrix V V ℝ)
+  g.M t = fun _ _ => (1 : ℝ) / Fintype.card V
 
 /--
 A quantum walk graph has uniform mixing if there exists
