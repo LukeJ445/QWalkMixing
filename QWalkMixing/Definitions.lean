@@ -6,13 +6,6 @@ import Mathlib.LinearAlgebra.Matrix.Hermitian
 import Mathlib.Analysis.Normed.Algebra.MatrixExponential
 import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
 
-
-/--
-The standard basis vector corresponding to vertex i
--/
-@[simp]
-def e {V : Type} [DecidableEq V] (i : V) : V → ℂ := Pi.single i 1
-
 /--
 A `WeightedGraph V W` assigns a weight in `W` to each ordered pair of vertices in `V`.
 
@@ -27,7 +20,7 @@ The adjacency matrix of a weighted graph.
 -/
 @[simp]
 def WeightedGraph.adjMatrix {V W : Type} [Zero W] (g : WeightedGraph V W) : Matrix V V W :=
-  fun v w => g.weight v w
+  g.weight
 
 /--
 Adjacency relation induced by a weighted graph.
@@ -130,3 +123,8 @@ some time `t` at which it has uniform mixing.
 def UniformMixing {V : Type} [Fintype V] [DecidableEq V]
     (g : QWalkGraph V) : Prop :=
   ∃ t : ℝ, UniformMixingAtTimeT g t
+
+def QWalkGraph.switchingEquivalent {V : Type} [Fintype V] [DecidableEq V]
+    (g h : QWalkGraph V) : Prop :=
+    ∃ (x : V → ℂ),
+    (Matrix.diagonal x).conjTranspose * g.adjMatrix * (Matrix.diagonal x) = h.adjMatrix

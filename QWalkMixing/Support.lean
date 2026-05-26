@@ -80,138 +80,96 @@ lemma M_doublyStocastic {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V
       rw [RCLike.star_def, ←Complex.normSq_eq_conj_mul_self]
     norm_cast at hColSum
 
-/--
-We have PST from `a` to `b` iff the entry at row `a` column `b` of `U`
-has the value `γ` where `‖γ‖ = 1`.
--/
-lemma PSTAtTimeT_phase_iff {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
-    (a b : V) (t : ℝ) : PSTAtTimeT g a b t ↔ ∃γ : ℂ, ‖γ‖ = 1 ∧ g.U t b a = γ := by
-  unfold PSTAtTimeT
-  unfold QWalkGraph.M
-  simp only [Matrix.of_apply, Matrix.map_apply, ↓existsAndEq, and_true]
-  constructor
-  · intro hPST
-    rw [Complex.normSq_eq_norm_sq, sq_eq_one_iff] at hPST
-    rcases hPST with (h1 | hn1)
-    · exact h1
-    · exfalso
-      have norm_nonneg : ‖g.U t b a‖ ≥ 0 := by apply norm_nonneg
-      linarith
-  · intro hPST
-    rw [Complex.normSq_eq_norm_sq, sq_eq_one_iff]
-    left
-    exact hPST
-
-/--
-PST from `a` to `b` at time t can be equivelently formulated as `U(t)e_a = γe_b`
-where `e_x` is the standard basis vector (0 everywhere except 1 at x)
-and `γ` is a phase with `‖γ‖ = 1`
--/
-theorem PSTAtTimeT_vector_iff {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
-    (a b : V) (t : ℝ) :
-    PSTAtTimeT g a b t ↔ ∃γ : ℂ, ‖γ‖ = 1 ∧ Matrix.mulVec (g.U t) (e a) = γ • (e b) := by
-  constructor
-  · intro hPST
-    rw [PSTAtTimeT_phase_iff] at hPST
-    rcases hPST with ⟨γ, hγ, hU⟩
-    refine ⟨γ, hγ, ?_⟩
-    funext i
-    by_cases hi : i = b
-    · rw [hi]
-      simpa
-    · simp only [e, Matrix.mulVec_single, MulOpposite.op_one, Pi.smul_apply,
-                Matrix.col_apply, one_smul, smul_eq_mul]
-      rw [Pi.single_eq_of_ne hi, mul_zero]
-      have hM : ∑ j, g.M t j a = 1 :=
-        sum_col_of_mem_doublyStochastic (M_doublyStocastic g t) a
-      simp only [QWalkGraph.M, Matrix.of_apply, Matrix.map_apply] at hM
-      have hγ' := congrArg (fun (v : ℝ) => v^2) hγ
-      simp only [one_pow] at hγ'
-      rw [←RCLike.normSq_eq_def', RCLike.normSq_to_complex, ←hU] at hγ'
-      have hb_in_V : b ∈ (@Finset.univ V _) := by grind
-      rw [←Finset.add_sum_erase Finset.univ _ hb_in_V, hγ', add_eq_left] at hM
-      have h_norm_nonneg : ∀ i ∈ Finset.univ.erase b, Complex.normSq (g.U t i a) ≥ 0 := by
-        intro i hi
-        exact Complex.normSq_nonneg (g.U t i a)
-      have h_i_mem : i ∈ Finset.univ.erase b := by grind
-      have h_norm_nonpos : Complex.normSq (g.U t i a) ≤ 0 := by
-        have := Finset.single_le_sum h_norm_nonneg h_i_mem
-        linarith
-      exact Complex.normSq_eq_zero.mp
-        (eq_of_ge_of_le (h_norm_nonneg i h_i_mem) h_norm_nonpos)
-  · intro hPST
-    rw [PSTAtTimeT_phase_iff]
-    rcases hPST with ⟨γ, hγ, hU⟩
-    refine ⟨γ, hγ, ?_⟩
-    have := congrArg (fun (v : V → ℂ) => v b) hU
-    simpa
-
-/--
-PST is transitive, meaning if we have PST from `a` to `b` at time `t1` and
-PST from `b` to `c` at time `t2`, then we have PST from `a` to `c` at time `t1 + t2`
--/
-theorem PSTAtTimeT_trans {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
-    {a b c : V} {t1 t2 : ℝ} (hPSTab : PSTAtTimeT g a b t1) (hPSTbc : PSTAtTimeT g b c t2)
-    : PSTAtTimeT g a c (t1 + t2) := by
-  rw [PSTAtTimeT_vector_iff] at *
-  rcases hPSTab with ⟨γ1, hγ1, hU1⟩
-  rcases hPSTbc with ⟨γ2, hγ2, hU2⟩
-  use γ1 * γ2
-  simp only [Complex.norm_mul, hγ1, hγ2, mul_one, true_and]
-  have hU := congrArg (fun (v : V → ℂ) => Matrix.mulVec (g.U t2) v) hU1
-  simp only [] at hU
-  rw [Matrix.mulVec_smul, hU2, Matrix.mulVec_mulVec] at hU
-  unfold QWalkGraph.U at hU
-  have h1 : (Complex.I * ↑(t1 + t2)) = (Complex.I * t2) + (Complex.I * t1) := by
-    simp only [Complex.ofReal_add]
-    rw [mul_add, add_comm]
-  rw [←Matrix.exp_add_of_commute] at hU
-  · rw [←add_smul, ←h1, ←QWalkGraph.U, smul_smul] at hU
-    exact hU
-  · rw [commute_iff_eq]
-    simp only [Algebra.mul_smul_comm, Algebra.smul_mul_assoc]
-    rw [smul_comm]
-
-/--
-If our graph is symmetric, then PST from `a` to `b` implies PST from `b` to `a` (it commutes).
-The symmetric condition is justified because there are
-nonsymmetric graphs that do not have this property.
--/
-theorem PSTAtTimeT_symmetric_comm {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
-    {a b : V} (hSymm : g.adjMatrix = g.adjMatrix.transpose) {t : ℝ} (hPST : PSTAtTimeT g a b t)
-    : PSTAtTimeT g b a t := by
-  rw [PSTAtTimeT_phase_iff] at *
-  rcases hPST with ⟨γ, hγ, hU⟩
-  use γ
-  apply And.intro hγ
-  rw [U_on_symmetric_is_symmetric g hSymm t, Matrix.transpose_apply]
-  exact hU
-
-/--
-Any PST on a symmetric graph implies that it must periodically return to
-the starting point.
--/
-theorem PST_symmetric_periodic {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph V)
-    {a b : V} (hSymm : g.adjMatrix = g.adjMatrix.transpose) {t : ℝ} (hPST : PSTAtTimeT g a b t)
-    : PSTAtTimeT g a a (2*t) := by
-  have hPST_comm : PSTAtTimeT g b a t := PSTAtTimeT_symmetric_comm g hSymm hPST
-  have hPST_self : PSTAtTimeT g a a (t + t) := PSTAtTimeT_trans g hPST hPST_comm
-  rw [←two_mul] at hPST_self
-  exact hPST_self
-
 /-- The orthogonal projector onto the `μ`-eigenspace of a Hermitian matrix `A`,
 expressed as a matrix: the sum of rank-one outer products `uᵢ uᵢ*` over the
 eigenvectors `uᵢ` whose eigenvalue equals `μ`. -/
-noncomputable def eigenProj {V : Type*} [Fintype V] [DecidableEq V]
+noncomputable def eigenProj {V : Type} [Fintype V] [DecidableEq V]
     {A : Matrix V V ℂ} (hA : A.IsHermitian) (μ : ℝ) : Matrix V V ℂ :=
   ∑ i ∈ Finset.univ.filter (fun i => hA.eigenvalues i = μ),
     Matrix.vecMulVec (hA.eigenvectorBasis i) (star (hA.eigenvectorBasis i))
+
+lemma eigenProj_trivial {V : Type} [Fintype V] [DecidableEq V] {A : Matrix V V ℂ}
+    (hA : A.IsHermitian) {μ : ℝ} (hμ : μ ∉ (Set.range hA.eigenvalues).toFinset)
+    : eigenProj hA μ = 0 := by
+  have hNotEigenvalue : Finset.univ.filter (fun i => hA.eigenvalues i = μ) = ∅ := by
+    grind
+  unfold eigenProj
+  rw [hNotEigenvalue, Finset.sum_empty]
+
+/--
+Eigen projectors are idempotent (`E^2 = E`)
+-/
+lemma eigenProj_idem {V : Type} [Fintype V] [DecidableEq V]
+    {A : Matrix V V ℂ} (hA : A.IsHermitian)
+    : ∀ μ, eigenProj hA μ * eigenProj hA μ = eigenProj hA μ := by
+  intro μ
+  unfold eigenProj
+  rw [Finset.sum_mul_sum, Finset.sum_congr (by rfl)]
+  intro a ha
+  rw [←Finset.sum_erase_add (Finset.univ.filter (fun j => hA.eigenvalues j = μ)) _ ha]
+  rw [Matrix.vecMulVec_mul_vecMulVec]
+  have hOrtho := hA.eigenvectorBasis.orthonormal
+  rw [orthonormal_iff_ite] at hOrtho
+  specialize hOrtho a a
+  simp only [↓reduceIte] at hOrtho
+  rw [EuclideanSpace.inner_eq_star_dotProduct, dotProduct_comm] at hOrtho
+  rw [hOrtho]
+  simp only [one_smul, add_eq_right]
+  rw [Finset.sum_eq_zero ?_]
+  intro x hx
+  have hax : a ≠ x := by grind
+  rw [Matrix.vecMulVec_mul_vecMulVec]
+  have hOrtho' := hA.eigenvectorBasis.orthonormal
+  rw [orthonormal_iff_ite] at hOrtho'
+  specialize hOrtho' a x
+  simp only [hax, ↓reduceIte] at hOrtho'
+  rw [EuclideanSpace.inner_eq_star_dotProduct, dotProduct_comm] at hOrtho'
+  rw [hOrtho']
+  simp
+
+/--
+Eigen projectors are orthagonal (`E₁*E₂ = 0`)
+-/
+lemma eigenProj_orthag {V : Type} [Fintype V] [DecidableEq V]
+    {A : Matrix V V ℂ} (hA : A.IsHermitian)
+    : ∀ a b, a ≠ b → eigenProj hA a * eigenProj hA b = 0 := by
+  intro a b hab
+  unfold eigenProj
+  rw [Finset.sum_mul_sum, Finset.sum_eq_zero ?_]
+  intro i hi
+  rw [Finset.sum_eq_zero ?_]
+  intro j hj
+  have hij : i ≠ j := by grind
+  rw [Matrix.vecMulVec_mul_vecMulVec, dotProduct_comm,
+      ←EuclideanSpace.inner_eq_star_dotProduct,
+      Orthonormal.inner_eq_zero hA.eigenvectorBasis.orthonormal hij]
+  simp
+
+/--
+`Ea*Eb` = `E` if `a = b` and `0` if `a ≠ b`
+-/
+lemma eigenProj_mul_ite {V : Type} [Fintype V] [DecidableEq V]
+    {A : Matrix V V ℂ} (hA : A.IsHermitian)
+    : ∀ a b, eigenProj hA a * eigenProj hA b = if a = b then eigenProj hA a else 0 := by
+  intro a b
+  by_cases hab : a = b
+  · simp [hab, eigenProj_idem]
+  · simp [hab, eigenProj_orthag]
+
+/--
+The eigen projectors of a matrix sum to the identity matrix
+-/
+lemma eigenProj_sum {V : Type} [Fintype V] [DecidableEq V]
+    {A : Matrix V V ℂ} (hA : A.IsHermitian)
+    : ∑ μ ∈ (Set.range hA.eigenvalues).toFinset, eigenProj hA μ = 1 := by
+  sorry
+
 
 /-- **Spectral decomposition of a Hermitian matrix.** A Hermitian matrix `A` is
 equal to the sum, over its distinct eigenvalues `μ`, of `μ` times the orthogonal
 projector onto the `μ`-eigenspace. -/
 theorem isHermitian_spectral_decomposition
-    {V : Type*} [Fintype V] [DecidableEq V]
+    {V : Type} [Fintype V] [DecidableEq V]
     {A : Matrix V V ℂ} (hA : A.IsHermitian) :
     A = ∑ μ ∈ (Set.range hA.eigenvalues).toFinset, (μ : ℂ) • eigenProj hA μ := by
   -- Reduce to entry-wise equality.
@@ -290,43 +248,60 @@ theorem U_spectral_decomp {V : Type} [Fintype V] [DecidableEq V] (g : QWalkGraph
     rw [smul_smul, ←(test x)]
   conv_lhs =>
     simp
-    rw [Matrix.exp_sum_of_commute
+    /-rw [Matrix.exp_sum_of_commute
         (Finset.image g.adjMatrix_hermitian.eigenvalues Finset.univ)
         f (by sorry)]
     unfold f
-    /-congr
+    congr
     · skip
     · intro i
       rw [Matrix.exp_nsmul (Complex.I * ↑t * ↑x)]-/
   sorry
   --simp
 
-
 def K2 : QWalkGraph (Fin 2) :=
   QWalkGraph.of (SimpleGraph.completeGraph (Fin 2))
 
 example : UniformMixing K2 := by
   use (Real.pi / 4)
-  unfold UniformMixingAtTimeT
+  unfold UniformMixingAtTimeT QWalkGraph.M
+  rw [U_spectral_decomp]
   simp
-  /-have adj : K2.adj_matrix = ![![0, 1], ![1, 0]] := by
-    unfold WeightedGraph.adj_matrix
-    funext x y
-    #check Fin.casesOn
-    have hx : x = 0 ∨ x = 1 := by grind
-    have hy : y = 0 ∨ y = 1 := by grind
+  have hadj : K2.adjMatrix = !![0, 1; 1, 0] := by
+    funext i j
+    have hx : i = 0 ∨ i = 1 := by grind
+    have hy : j = 0 ∨ j = 1 := by grind
     unfold K2
     unfold QWalkGraph.of
-    rcases hx with (hx | hx)
-    · rcases hy with (hy | hy)
-      · simp [hx, hy]
-      · simp [hx, hy]
-    · rcases hy with (hy | hy)
-      · simp [hx, hy]
-      · simp [hx, hy]
-  rw [adj]
-  simp-/
+    fin_cases i <;> fin_cases j <;> simp
+
+  let l1 : ℝ := 1
+  let u1 : Fin 2 → ℂ := (1 / Real.sqrt 2 : ℂ) • ![1, 1]
+  let l2 : ℝ := -1
+  let u2 : Fin 2 → ℂ := (1 / Real.sqrt 2 : ℂ) • ![1, -1]
+
+  let eigenvalues : (Fin 2 → ℝ ):= ![l1, l2]
+  let eigenvectors : (Fin 2 → (Fin 2 → ℂ)) := ![u1, u2]
+
+  have heigens : ∀ n, K2.adjMatrix.mulVec (eigenvectors n) = (eigenvalues n) • (eigenvectors n) := by
+   sorry
+  #check K2.adjMatrix_hermitian.eigenvectorBasis
+  #check K2.adjMatrix_hermitian.eigenvectorBasis
+  sorry
+  /-have horth : Orthonormal ℂ ↑eigenvectors := by
+    rw [orthonormal_iff_ite]
+    intro i j
+    fin_cases i <;> fin_cases j <;> simp [heigens]
+
+  have hEigen : K2.adjMatrix_hermitian.eigenvalues = ![1, -1] := by
+    ext i
+    fin_cases i <;> simp [hadj]
+    unfold Matrix.IsHermitian.eigenvalues
+    sorry
+  unfold eigenProj
+
+  simp
   have K2_symm : (K2.adjMatrix.toEuclideanLin).IsSymmetric := by sorry
     --simpa using K2.adjMatrix_hermitian.isSymmetric_toEuclideanLin
   --#check LinearMap.IsSymmetric.toMatrix_eigenvectorBasis K2_symm
-  sorry
+  sorry-/
