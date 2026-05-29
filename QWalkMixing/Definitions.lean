@@ -126,5 +126,5 @@ def UniformMixing {V : Type} [Fintype V] [DecidableEq V]
 
 def QWalkGraph.switchingEquivalent {V : Type} [Fintype V] [DecidableEq V]
     (g h : QWalkGraph V) : Prop :=
-    ∃ (x : V → ℂ),
-    (Matrix.diagonal x).conjTranspose * g.adjMatrix * (Matrix.diagonal x) = h.adjMatrix
+    ∃ (x : V → ℂ), (∀ i, ‖x i‖ = 1) ∧
+    (Matrix.diagonal x) * g.adjMatrix * (Matrix.diagonal x).conjTranspose = h.adjMatrix

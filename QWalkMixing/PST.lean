@@ -121,5 +121,5 @@ theorem PST_symmetric_periodic {V : Type} [Fintype V] [DecidableEq V] (g : QWalk
     : PSTAtTimeT g a a (2*t) := by
   have hPST_comm : PSTAtTimeT g b a t := PSTAtTimeT_symmetric_comm g hSymm hPST
   have hPST_self : PSTAtTimeT g a a (t + t) := PSTAtTimeT_trans g hPST hPST_comm
-  rw [←two_mul] at hPST_self
+  rw [two_mul]
   exact hPST_self
